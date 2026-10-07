@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NCM811 ISC Detection</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="container">
+
+    <header class="header">
+        <h1>NCM811 Battery ISC Detection</h1>
+        <p>Machine Learning Based Internal Short-Circuit Detection</p>
+    </header>
+
+    <!-- CSV MODE -->
+    <section class="mode-section">
+
+        <div class="card">
+
+            <h2>Upload Battery Experiment Data</h2>
+
+            <p class="description">
+                Upload an NCM811 battery experiment CSV file.
+                The system will extract the required features automatically.
+            </p>
+
+            <div class="upload-area">
+
+                <input type="file" id="csvFile" accept=".csv">
+
+                <label for="csvFile" class="upload-label">
+                    Choose CSV File
+                </label>
+
+                <p id="fileName">No file selected</p>
+
+            </div>
+
+            <button class="predict-btn" onclick="predictCSV()">
+                Predict Battery Condition
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <!-- RESULT -->
+    <section id="resultSection" class="result-section hidden">
+
+        <div class="result-card">
+
+            <h2>Prediction Result</h2>
+
+            <div id="predictionResult"
+                 class="prediction-result">
+                --
+            </div>
+
+            <div class="probability-container">
+
+                <div class="probability-box">
+                    <span>Normal Probability</span>
+                    <strong id="normalProbability">--</strong>
+                </div>
+
+                <div class="probability-box">
+                    <span>ISC Probability</span>
+                    <strong id="iscProbability">--</strong>
+                </div>
+
+            </div>
+
+            <div class="details">
+
+                <div>
+                    <span>Input Type</span>
+                    <strong id="inputType">--</strong>
+                </div>
+
+                <div>
+                    <span>Rows Processed</span>
+                    <strong id="rowsProcessed">--</strong>
+                </div>
+
+                <div>
+                    <span>Features Used</span>
+                    <strong id="featuresUsed">--</strong>
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <div id="errorMessage"
+         class="error-message hidden"></div>
+
+</div>
+
+
+<script>
+
+document
+    .getElementById("csvFile")
+    .addEventListener("change", function() {
+
+        const fileName =
+            document.getElementById("fileName");
+
+        if (this.files.length > 0) {
+            fileName.textContent =
+                this.files[0].name;
+        } else {
+            fileName.textContent =
+                "No file selected";
+        }
+    });
+
+
+async function predictCSV() {
+
+    hideError();
+
+    const fileInput =
+        document.getElementById("csvFile");
+
+    if (fileInput.files.length === 0) {
+
+        showError(
+            "Please select a CSV file first."
+        );
+
+        return;
+    }
+
+    const formData =
+        new FormData();
+
+    formData.append(
+        "file",
+        fileInput.files[0]
+    );
+
+    try {
+
+        const response =
+            await fetch("/predict", {
+
+                method: "POST",
+
+                body: formData
+            });
+
+        const result =
+            await response.json();
+
+        if (!response.ok) {
+
+            showError(
+                result.error ||
+                "Prediction failed."
+            );
+
+            return;
+        }
+
+        displayResult(result);
+
+    } catch (error) {
+
+        showError(
+            "Unable to connect to the prediction server."
+        );
+    }
+}
+
+
+function displayResult(result) {
+
+    document
+        .getElementById("resultSection")
+        .classList.remove("hidden");
+
+    document
+        .getElementById("predictionResult")
+        .textContent =
+            result.result;
+
+    document
+        .getElementById("normalProbability")
+        .textContent =
+            result.normal_probability + "%";
+
+    document
+        .getElementById("iscProbability")
+        .textContent =
+            result.isc_probability + "%";
+
+    document
+        .getElementById("inputType")
+        .textContent =
+            result.input_type || "--";
+
+    document
+        .getElementById("rowsProcessed")
+        .textContent =
+            result.rows_processed || "--";
+
+    document
+        .getElementById("featuresUsed")
+        .textContent =
+            result.features_used || "--";
+
+    document
+        .getElementById("resultSection")
+        .scrollIntoView({
+            behavior: "smooth"
+        });
+}
+
+
+function showError(message) {
+
+    const error =
+        document.getElementById("errorMessage");
+
+    error.textContent = message;
+
+    error.classList.remove("hidden");
+}
+
+
+function hideError() {
+
+    document
+        .getElementById("errorMessage")
+        .classList.add("hidden");
+}
+
+
+</script>
+
+</body>
+</html>
